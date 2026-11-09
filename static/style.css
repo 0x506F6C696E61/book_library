@@ -1,0 +1,76 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f5f3ef;
+    color: #292929;
+}
+
+header {
+    padding: 30px 20px;
+    text-align: center;
+    background-color: #e7ded2;
+}
+
+header h1 {
+    margin-bottom: 8px;
+}
+
+main {
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+
+.toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 16px;
+}
+
+button {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 6px;
+    background-color: #655344;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #493b30;
+}
+
+.books-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+}
+
+.book-card {
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.book-card h3 {
+    margin-top: 0;
+}
+
+#message {
+    color: #655344;
+}
+
+@media (max-width: 500px) {
+    .toolbar {
+        flex-direction: column;
+    }
+}
