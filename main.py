@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI, HTTPException #FastAPI — это веб-фреймворк для создания API на Python,
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -12,7 +13,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 class BookCreate(BaseModel):    #наследуемся от BaseModel
     title: str  #в pydantic обязательно нужно указывать типы данных
     liked: str
-
+    author_ids: List[int] = []  # По умолчанию пустой список, если авторов нет
 
 @app.get("/")
 def home():
@@ -36,7 +37,14 @@ def get_book(book_id: int):
 
 @app.post("/books")
 def create_book(book: BookCreate):
-    return database.create_book(book.title, book.liked)
+    try:
+        return database.create_book(book.title, book.liked, book.author_ids)
+    except Exception as e:
+        # Если база данных выбросила ошибку (например, из-за внешнего ключа ForeignKey)
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Не удалось создать книгу. Проверьте правильность ID авторов. Ошибка: {str(e)}"
+        )
 
 
 @app.delete("/books/{book_id}", status_code=204)
@@ -49,16 +57,24 @@ def delete_book(book_id: int):
 
 @app.put("/books/{book_id}")
 def update_book(book_id: int, book: BookCreate):
-    updated_book = database.update_book(
-        book_id,
-        book.title,
-        book.liked
-    )
-
-    if updated_book is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Книга не найдена"
+    try:
+        updated_book = database.update_book(
+            book_id,
+            book.title,
+            book.liked,
+            book.author_ids  # Передаем массив ID авторов
         )
 
-    return updated_book
+        if updated_book is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Книга не найдена"
+            )
+
+        return updated_book
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Не удалось обновить книгу. Ошибка: {str(e)}"
+        )
