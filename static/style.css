@@ -1,76 +1,313 @@
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #f5f3ef;
-    color: #292929;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background-color: #f7f7f7;
+    color: #181818;
 }
 
-header {
-    padding: 30px 20px;
-    text-align: center;
-    background-color: #e7ded2;
+/* Темная шапка как на референсе */
+.site-header {
+    background-color: #181818;
+    color: #ffffff;
+    padding: 24px 0 28px;
 }
 
-header h1 {
-    margin-bottom: 8px;
+.header-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
 }
 
-main {
-    max-width: 1000px;
-    margin: 30px auto;
-    padding: 0 20px;
-}
-
-.toolbar {
+.header-top {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 32px;
 }
 
-input {
+.site-title {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.search-wrapper {
     flex: 1;
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 16px;
+    max-width: 420px;
 }
 
-button {
-    padding: 12px 18px;
-    border: none;
+.search-input {
+    width: 100%;
+    padding: 10px 14px;
+    background-color: #2b2b2b;
+    border: 1px solid #3a3a3a;
     border-radius: 6px;
-    background-color: #655344;
-    color: white;
+    color: #ffffff;
+    font-size: 15px;
+    outline: none;
+}
+
+.search-input::placeholder {
+    color: #888888;
+}
+
+.search-input:focus {
+    border-color: #666666;
+}
+
+.reset-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid #444444;
+    color: #cccccc;
+    padding: 8px 14px;
+    border-radius: 6px;
     cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
 }
 
-button:hover {
-    background-color: #493b30;
+.reset-btn:hover {
+    border-color: #ffffff;
+    color: #ffffff;
+}
+
+/* Таймлайн */
+.timeline-wrapper {
+    position: relative;
+    width: 100%;
+    user-select: none;
+}
+
+.timeline__list {
+    position: relative;
+    height: 28px;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 8px 0;
+}
+
+.timeline__tick {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 14px;
+    color: #777777;
+    cursor: pointer;
+    padding: 2px 6px;
+    transition: color 0.15s;
+}
+
+.timeline__tick:hover {
+    color: #ffffff;
+}
+
+.timeline__badge {
+    position: absolute;
+    transform: translateX(-50%);
+    background-color: #ffffff;
+    color: #181818;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    z-index: 3;
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.timeline__inner {
+    position: relative;
+    height: 24px;
+    display: flex;
+    align-items: center;
+}
+
+.slider {
+    position: relative;
+    width: 100%;
+    height: 3px;
+}
+
+.slider__track {
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    background: #444444;
+    border-radius: 2px;
+}
+
+.slider__progress {
+    position: absolute;
+    height: 3px;
+    background: #ffffff;
+    border-radius: 2px;
+}
+
+.slider__input {
+    position: absolute;
+    width: 100%;
+    height: 3px;
+    top: 0;
+    left: 0;
+    margin: 0;
+    padding: 0;
+    background: none;
+    pointer-events: none;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.slider__input::-webkit-slider-thumb {
+    pointer-events: auto;
+    -webkit-appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: none;
+    cursor: grab;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 4;
+}
+
+.slider__input::-moz-range-thumb {
+    pointer-events: auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: none;
+    cursor: grab;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    position: relative;
+    z-index: 4;
+}
+
+/* Выпадающие фильтры под таймлайном */
+.header-filters {
+    display: flex;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.filter-select {
+    width: 240px;
+    padding: 11px 36px 11px 14px;
+    background-color: #2b2b2b;
+    border: 1px solid #363636;
+    border-radius: 4px;
+    color: #999999;
+    font-size: 15px;
+    cursor: pointer;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://w3.org' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%23888888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' d='M1 1.5L6 6.5L11 1.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.filter-select:hover,
+.filter-select:focus {
+    border-color: #555555;
+}
+
+/* Когда выбрано конкретное значение — подсвечиваем текст белым */
+.filter-select.has-value {
+    color: #ffffff;
+    border-color: #666666;
+}
+
+.filter-select option {
+    background-color: #2b2b2b;
+    color: #ffffff;
+}
+
+/* Основная зона с карточками */
+main {
+    max-width: 1100px;
+    margin: 28px auto;
+    padding: 0 24px;
+}
+
+#message {
+    color: #666666;
+    font-size: 14px;
+    margin-bottom: 20px;
 }
 
 .books-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 20px;
 }
 
 .book-card {
+    background-color: #ffffff;
     padding: 20px;
-    background-color: white;
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .book-card h3 {
-    margin-top: 0;
+    margin: 0 0 10px 0;
+    font-size: 17px;
+    line-height: 1.3;
 }
 
-#message {
-    color: #655344;
+.book-card p {
+    margin: 4px 0;
+    font-size: 14px;
+    color: #444444;
 }
 
-@media (max-width: 500px) {
-    .toolbar {
+.book-meta {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid #eeeeee;
+    font-size: 13px;
+    color: #666666;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.book-year {
+    font-weight: 600;
+    color: #181818;
+    white-space: nowrap;
+}
+
+@media (max-width: 650px) {
+    .header-top {
+        flex-wrap: wrap;
+    }
+    .search-wrapper {
+        order: 3;
+        max-width: 100%;
+        flex-basis: 100%;
+    }
+    .header-filters {
         flex-direction: column;
     }
+    .filter-select {
+        width: 100%;
+    }
+}
+
+
+.book-translator {
+    font-size: 13px !important;
+    color: #777777 !important;
+    margin-top: 6px !important;
 }

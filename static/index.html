@@ -1,36 +1,57 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
+<!DOCTYPE html> <!-- объявляем тип страницы, обеспечивает стандартный режим отображения-->
+<html lang="ru"> <!-- тег html определяет начало HTML-файла, внутри него хранится <head> и <body> -->
+    <head> <!-- в этом теге лежит всё, что не контент страницы. #Cодержимое этого раздела не показывается напрямую на странице, за исключением контейнера <title> -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/static/favicon.ico" type="image/vnd.microsoft.icon">
     <title>Моя библиотека</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/style.css?v=2">
 </head>
 <body>
 
-    <header>
-        <h1>Моя библиотека</h1>
-        <p>Моя личная коллекция книг</p>
+     <header class="site-header">
+        <div class="header-container">
+            <div class="header-top">
+                <h1 class="site-title">Моя библиотека</h1>
+                <div class="search-wrapper">
+                    <input type="text" id="search" class="search-input" placeholder="Поиск по книгам">
+                </div>
+                <button id="reset-btn" class="reset-btn" type="button" title="Сбросить все фильтры">Сбросить</button>
+            </div>
+
+            <div class="timeline-wrapper">
+                <!-- Шкала с годами -->
+                <ul id="timeline-years" class="timeline__list"></ul>
+
+                <!-- Двойной ползунок -->
+                <div class="timeline__inner">
+                    <div class="slider">
+                        <div class="slider__track"></div>
+                        <div id="slider-progress" class="slider__progress"></div>
+                        <input type="range" id="range-min" class="slider__input" step="1">
+                        <input type="range" id="range-max" class="slider__input" step="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Выпадающие списки под таймлайном -->
+            <div class="header-filters">
+                <select id="author-filter" class="filter-select">
+                    <option value="">Автор</option>
+                </select>
+
+                <select id="publisher-filter" class="filter-select">
+                    <option value="">Издательство</option>
+                </select>
+            </div>
+        </div>
     </header>
 
     <main>
-        <section class="toolbar">
-            <input
-                type="text"
-                id="search"
-                placeholder="Найти книгу..."
-            >
-
-            <button id="load-books">Показать книги</button>
-        </section>
-
         <p id="message">Загружаем книги...</p>
-
-        <section id="books" class="books-container">
-        </section>
+        <section id="books" class="books-container"></section> 
     </main>
 
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js?v=3"></script>
 </body>
 </html>

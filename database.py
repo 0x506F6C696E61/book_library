@@ -28,25 +28,41 @@ def get_books():
                 b.title, 
                 b.liked,
                 COALESCE(
-                    string_agg(CONCAT_WS(' ', a.first_name, a.last_name), ', '), 
+                    string_agg(DISTINCT CONCAT_WS(' ', a.first_name, a.last_name), ', '), 
                     'Не указан'
-                ) as authors
+                ) AS authors,
+                COALESCE(
+                    array_remove(array_agg(DISTINCT e.publication_year ORDER BY e.publication_year), NULL), 
+                    '{}'
+                ) AS years,
+                COALESCE(
+                    array_remove(array_agg(DISTINCT p.name ORDER BY p.name), NULL), 
+                    '{}'
+                ) AS publishers,
+                string_agg(DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', ') AS translators
             FROM books b
             LEFT JOIN book_authors ba USING (book_id)
             LEFT JOIN authors a USING (author_id)
+            LEFT JOIN editions e USING (book_id)
+            LEFT JOIN publishers p USING (publisher_id)
+            LEFT JOIN edition_translators et USING (edition_id)
+            LEFT JOIN translators t USING (translator_id)
             GROUP BY b.book_id, b.title, b.liked
+            ORDER BY b.book_id
         """)
         rows = cursor.fetchall()
 
         books = []
         for row in rows:
-            book = {
+            books.append({
                 "book_id": row[0],
                 "title": row[1],
                 "liked": row[2],
-                "author": row[3]  # Теперь сюда запишется строка вида "Иван Иванов, Петр Петров"
-            }
-            books.append(book)
+                "author": row[3],
+                "years": row[4],
+                "publishers": row[5],
+                "translator": row[6]
+            })
 
         return books
 
@@ -58,16 +74,31 @@ def get_book(book_id):
                 b.book_id, 
                 b.title, 
                 b.liked,
-                COALESCE(string_agg(CONCAT_WS(' ', a.first_name, a.last_name), ', '), 'Не указан') as authors
+                COALESCE(
+                    string_agg(DISTINCT CONCAT_WS(' ', a.first_name, a.last_name), ', '), 
+                    'Не указан'
+                ) AS authors,
+                COALESCE(
+                    array_remove(array_agg(DISTINCT e.publication_year ORDER BY e.publication_year), NULL), 
+                    '{}'
+                ) AS years,
+                COALESCE(
+                    array_remove(array_agg(DISTINCT p.name ORDER BY p.name), NULL), 
+                    '{}'
+                ) AS publishers,
+                string_agg(DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', ') AS translators
             FROM books b
             LEFT JOIN book_authors ba USING (book_id)
             LEFT JOIN authors a USING (author_id)
+            LEFT JOIN editions e USING (book_id)
+            LEFT JOIN publishers p USING (publisher_id)
+            LEFT JOIN edition_translators et USING (edition_id)
+            LEFT JOIN translators t USING (translator_id)
             WHERE b.book_id = %s
             GROUP BY b.book_id, b.title, b.liked
         """, (book_id,))
 
         row = cursor.fetchone()
-
         if row is None:
             return None
 
@@ -75,13 +106,40 @@ def get_book(book_id):
             "book_id": row[0],
             "title": row[1],
             "liked": row[2],
-            "author": row[3]
+            "author": row[3],
+            "years": row[4],
+            "publishers": row[5],
+            "translator": row[6]
         }
+
+
+def get_authors():
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT 
+                author_id, 
+                CONCAT_WS(' ', first_name, last_name) AS full_name, 
+                author_country
+            FROM authors
+            ORDER BY author_id
+        """)
+        rows = cursor.fetchall()
+
+        authors = []
+        for row in rows:
+            authors.append({
+                "author_id": row[0],
+                "name": row[1],
+                "author_country": row[2]
+            })
+
+        return authors
+
+
 
 def create_book(title, liked, author_ids: list[int]):
     with connection.cursor() as cursor:
         try:
-            # 1. Создаем саму книгу
             cursor.execute(
                 """
                 INSERT INTO books (title, liked)
@@ -93,7 +151,6 @@ def create_book(title, liked, author_ids: list[int]):
             book_row = cursor.fetchone()
             new_book_id = book_row[0]
 
-            # 2. Привязываем книгу к авторам в промежуточной таблице
             if author_ids:
                 for author_id in author_ids:
                     cursor.execute(
@@ -104,55 +161,35 @@ def create_book(title, liked, author_ids: list[int]):
                         (new_book_id, author_id)
                     )
 
-            # Подтверждаем транзакцию, если все шаги прошли успешно
             connection.commit()
 
-            # Возвращаем созданную книгу (для фронтенда мы можем временно отдать пустую строку 
-            # или сделать повторный SELECT, но для простоты вернем структуру книги)
             return {
                 "book_id": book_row[0],
                 "title": book_row[1],
                 "liked": book_row[2],
                 "author_ids": author_ids
             }
-            
         except Exception as e:
-            # Если произошла ошибка (например, передали несуществующий author_id), 
-            # отменяем все изменения этого шага
             connection.rollback()
             raise e
+
 
 def delete_book(book_id):
     with connection.cursor() as cursor:
         try:
-            # 1. Сначала удаляем все связи этой книги с авторами
-            cursor.execute(
-                "DELETE FROM book_authors WHERE book_id = %s",
-                (book_id,)
-            )
-            
-            # 2. Теперь спокойно удаляем саму книгу
-            cursor.execute(
-                "DELETE FROM books WHERE book_id = %s RETURNING book_id",
-                (book_id,)
-            )
-            
+            cursor.execute("DELETE FROM book_authors WHERE book_id = %s", (book_id,))
+            cursor.execute("DELETE FROM books WHERE book_id = %s RETURNING book_id", (book_id,))
             row = cursor.fetchone()
-            
-            # Подтверждаем изменения в БД
             connection.commit()
-            
             return row is not None
-        
         except Exception as e:
-            # Если что-то пошло не так, отменяем операцию
             connection.rollback()
             raise e
+
 
 def update_book(book_id, title, liked, author_ids: list[int]):
     with connection.cursor() as cursor:
         try:
-            # 1. Обновляем основные данные книги
             cursor.execute(
                 """
                 UPDATE books
@@ -167,13 +204,8 @@ def update_book(book_id, title, liked, author_ids: list[int]):
             if row is None:
                 return None
 
-            # 2. Удаляем старые связи с авторами
-            cursor.execute(
-                "DELETE FROM book_authors WHERE book_id = %s",
-                (book_id,)
-            )
+            cursor.execute("DELETE FROM book_authors WHERE book_id = %s", (book_id,))
 
-            # 3. Записываем новые связи с авторами
             if author_ids:
                 for author_id in author_ids:
                     cursor.execute(
@@ -184,7 +216,6 @@ def update_book(book_id, title, liked, author_ids: list[int]):
                         (book_id, author_id)
                     )
 
-            # Подтверждаем транзакцию
             connection.commit()
 
             return {
@@ -193,7 +224,6 @@ def update_book(book_id, title, liked, author_ids: list[int]):
                 "liked": row[2],
                 "author_ids": author_ids
             }
-
         except Exception as e:
             connection.rollback()
             raise e

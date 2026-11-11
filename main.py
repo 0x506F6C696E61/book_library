@@ -2,7 +2,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException #FastAPI — это веб-фреймворк для создания API на Python,
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from pydantic import BaseModel #pydantic - библиотека, нужна для валидации входящих и сходящих данных по типам, для установки ограничений; basemodel - класс
+from pydantic import BaseModel, Field #pydantic - библиотека, нужна для валидации входящих и сходящих данных по типам, для установки ограничений; basemodel - класс
 import database
 
 app = FastAPI()
@@ -13,7 +13,8 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 class BookCreate(BaseModel):    #наследуемся от BaseModel
     title: str  #в pydantic обязательно нужно указывать типы данных
     liked: str
-    author_ids: List[int] = []  # По умолчанию пустой список, если авторов нет
+    # min_items=1 требует, чтобы в массиве был как минимум 1 ID автора
+    author_ids: List[int] = Field(..., min_items=1) 
 
 @app.get("/")
 def home():
@@ -33,6 +34,12 @@ def get_book(book_id: int):
         raise HTTPException(status_code=404, detail="Книга не найдена")
 
     return book
+
+
+@app.get("/authors")
+def get_authors():
+    return database.get_authors()
+
 
 
 @app.post("/books")
