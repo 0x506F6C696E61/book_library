@@ -1,18 +1,28 @@
-// Закрываем окно по нажатию на крестик
-modalClose.addEventListener("click", () => {
-    bookModal.classList.remove("active");
-});
+/* Таблица сведений о книге */
+.book-details {
+    display: flex;
+    flex-direction: column;
+}
 
-// Закрываем окно по нажатию на затемнённую область
-bookModal.addEventListener("click", (event) => {
-    if (event.target === bookModal) {
-        bookModal.classList.remove("active");
-    }
-});
+.book-detail {
+    display: grid;
+    grid-template-columns: 40% 60%;
+    gap: 20px;
+    padding: 14px 0;
+    border-bottom: 1px solid #eeeeee;
+}
 
-// Закрываем окно по нажатию клавиши Escape
-document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-        bookModal.classList.remove("active");
-    }
-});
+.book-detail:first-child {
+    border-top: 1px solid #eeeeee;
+}
+
+.book-detail-label {
+    font-size: 13px;
+    color: #888888;
+}
+
+.book-detail-value {
+    font-size: 15px;
+    color: #181818;
+    line-height: 1.5;
+}
