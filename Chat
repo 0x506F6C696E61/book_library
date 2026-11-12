@@ -1,368 +1,85 @@
-<!DOCTYPE html> <!-- объявляем тип страницы, обеспечивает стандартный режим отображения-->
-<html lang="ru"> <!-- тег html определяет начало HTML-файла, внутри него хранится <head> и <body> -->
-    <head> <!-- в этом теге лежит всё, что не контент страницы. #Cодержимое этого раздела не показывается напрямую на странице, за исключением контейнера <title> -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" href="/static/favicon.ico" type="image/vnd.microsoft.icon">
-    <title>Моя библиотека</title>
-    <link rel="stylesheet" href="/static/style.css?v=2">
-</head>
-<body>
+def get_book(book_id):
+    with connection.cursor() as cursor:
+        cursor.execute("""
+            SELECT
+                b.book_id,
+                b.title,
+                b.liked,
 
-     <header class="site-header">
-        <div class="header-container">
-            <div class="header-top">
-                <h1 class="site-title">Моя библиотека</h1>
-            </div>
-                    <input type="text" id="search" class="search-input" placeholder="Поиск по книгам">
-                </div>
-                <button id="reset-btn" class="reset-btn" type="button" title="Сбросить все фильтры">Сбросить</button>
-            </div>
+                -- Авторы
+                (
+                    SELECT string_agg(
+                        DISTINCT CONCAT_WS(' ', a.first_name, a.last_name), ', '
+                    )
+                    FROM book_authors ba
+                    JOIN authors a USING (author_id)
+                    WHERE ba.book_id = b.book_id
+                ) AS authors,
 
-            <div class="timeline-wrapper">
-                <!-- Шкала с годами -->
-                <ul id="timeline-years" class="timeline__list"></ul>
+                -- Страны авторов
+                (
+                    SELECT string_agg(
+                        DISTINCT a.author_country, ', '
+                    )
+                    FROM book_authors ba
+                    JOIN authors a USING (author_id)
+                    WHERE ba.book_id = b.book_id
+                      AND a.author_country IS NOT NULL
+                      AND a.author_country <> ''
+                ) AS author_countries,
 
-                <!-- Двойной ползунок -->
-                <div class="timeline__inner">
-                    <div class="slider">
-                        <div class="slider__track"></div>
-                        <div id="slider-progress" class="slider__progress"></div>
-                        <input type="range" id="range-min" class="slider__input" step="1">
-                        <input type="range" id="range-max" class="slider__input" step="1">
-                    </div>
-                </div>
-            </div>
+                -- Годы издания
+                (
+                    SELECT array_agg(DISTINCT e.publication_year ORDER BY e.publication_year)
+                    FROM editions e
+                    WHERE e.book_id = b.book_id
+                      AND e.publication_year IS NOT NULL
+                ) AS years,
 
-            <!-- Выпадающие списки под таймлайном -->
-            <div class="header-filters">
+                -- Издательства
+                (
+                    SELECT array_agg(DISTINCT p.name ORDER BY p.name)
+                    FROM editions e
+                    JOIN publishers p USING (publisher_id)
+                    WHERE e.book_id = b.book_id
+                ) AS publishers,
 
-                <input
-                    type="text"
-                    id="title-filter"
-                    class="filter-select"
-                    placeholder="Название книги"
-                >
+                -- Языки издания
+                (
+                    SELECT array_agg(DISTINCT e.language ORDER BY e.language)
+                    FROM editions e
+                    WHERE e.book_id = b.book_id
+                      AND e.language IS NOT NULL
+                ) AS languages,
 
-                <select id="author-filter" class="filter-select">
-                    <option value="">Автор</option>
-                </select>
+                -- Переводчики
+                (
+                    SELECT string_agg(
+                        DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', '
+                    )
+                    FROM editions e
+                    JOIN edition_translators et USING (edition_id)
+                    JOIN translators t USING (translator_id)
+                    WHERE e.book_id = b.book_id
+                ) AS translators
 
-                <select id="publisher-filter" class="filter-select">
-                    <option value="">Издательство</option>
-                </select>
+            FROM books b
+            WHERE b.book_id = %s
+        """, (book_id,))
 
-                <button id="reset-btn" class="reset-btn" type="button">
-                    Сбросить
-                </button>
+        row = cursor.fetchone()
 
-            </div>
-        </div>
-    </header>
+        if row is None:
+            return None
 
-    <main>
-        <p id="message">Загружаем книги...</p>
-        <section id="books" class="books-container"></section> 
-    </main>
-
-    <script src="/static/script.js?v=3"></script>
-</body>
-</html>
-
-
-scripts.js
-document.addEventListener("DOMContentLoaded", () => {
-    const booksContainer = document.getElementById("books");
-    const message = document.getElementById("message");
-    const titleFilter = document.getElementById("title-filter");
-
-    const rangeMin = document.getElementById("range-min");
-    const rangeMax = document.getElementById("range-max");
-    const progress = document.getElementById("slider-progress");
-    const yearsList = document.getElementById("timeline-years");
-    const resetBtn = document.getElementById("reset-btn");
-
-    const authorFilter = document.getElementById("author-filter");
-    const publisherFilter = document.getElementById("publisher-filter");
-
-    let allBooks = [];
-    let uniqueYears = [];
-
-    async function loadBooks() {
-        message.textContent = "Загружаем книги...";
-
-        try {
-            const response = await fetch("/books");
-            if (!response.ok) {
-                throw new Error(`Ошибка сервера: ${response.status}`);
-            }
-
-            allBooks = await response.json();
-            populateDropdowns();
-            initTimeline();
-        } catch (error) {
-            message.textContent = "Ошибка загрузки книг. Проверьте терминал Python.";
-            console.error(error);
+        return {
+            "book_id": row[0],
+            "title": row[1],
+            "liked": row[2],
+            "author": row[3],
+            "author_country": row[4],
+            "years": row[5] or [],
+            "publishers": row[6] or [],
+            "languages": row[7] or [],
+            "translator": row[8]
         }
-    }
-
-    // Заполняем выпадающие списки авторов и издательств
-    function populateDropdowns() {
-        const authorsSet = new Set();
-        const publishersSet = new Set();
-
-        allBooks.forEach(book => {
-            if (book.author && book.author !== "Не указан") {
-                book.author.split(",").forEach(a => {
-                    const trimmed = a.trim();
-                    if (trimmed) authorsSet.add(trimmed);
-                });
-            }
-
-            if (Array.isArray(book.publishers)) {
-                book.publishers.forEach(pub => {
-                    if (pub) publishersSet.add(pub.trim());
-                });
-            }
-        });
-
-        const sortedAuthors = [...authorsSet].sort((a, b) => a.localeCompare(b, "ru"));
-        const sortedPublishers = [...publishersSet].sort((a, b) => a.localeCompare(b, "ru"));
-
-        authorFilter.innerHTML = '<option value="">Автор</option>';
-        sortedAuthors.forEach(author => {
-            const opt = document.createElement("option");
-            opt.value = author;
-            opt.textContent = author;
-            authorFilter.appendChild(opt);
-        });
-
-        publisherFilter.innerHTML = '<option value="">Издательство</option>';
-        sortedPublishers.forEach(pub => {
-            const opt = document.createElement("option");
-            opt.value = pub;
-            opt.textContent = pub;
-            publisherFilter.appendChild(opt);
-        });
-    }
-
-    function initTimeline() {
-        const yearsSet = new Set();
-        allBooks.forEach(book => {
-            if (Array.isArray(book.years)) {
-                book.years.forEach(y => {
-                    if (y !== null && y !== undefined) yearsSet.add(Number(y));
-                });
-            }
-        });
-
-        uniqueYears = [...yearsSet].sort((a, b) => a - b);
-
-        if (uniqueYears.length === 0) {
-            rangeMin.disabled = true;
-            rangeMax.disabled = true;
-            applyFilters();
-            return;
-        }
-
-        const maxIndex = uniqueYears.length - 1;
-        rangeMin.disabled = false;
-        rangeMax.disabled = false;
-
-        rangeMin.min = 0;
-        rangeMin.max = maxIndex;
-        rangeMin.value = 0;
-
-        rangeMax.min = 0;
-        rangeMax.max = maxIndex;
-        rangeMax.value = maxIndex;
-
-        applyFilters();
-    }
-
-    function renderScaleLabels(minIdx, maxIdx, maxIndex) {
-        yearsList.innerHTML = "";
-        if (maxIndex <= 0) return;
-
-        const startYear = uniqueYears[minIdx];
-        const endYear = uniqueYears[maxIdx];
-        const leftPercent = (minIdx / maxIndex) * 100;
-        const rightPercent = (maxIdx / maxIndex) * 100;
-
-        uniqueYears.forEach((year, idx) => {
-            const posPercent = (idx / maxIndex) * 100;
-            const tooCloseToLeft = Math.abs(posPercent - leftPercent) < 7;
-            const tooCloseToRight = Math.abs(posPercent - rightPercent) < 7;
-
-            if (!tooCloseToLeft && !tooCloseToRight && idx % 2 === 0) {
-                const tick = document.createElement("li");
-                tick.className = "timeline__tick";
-                tick.style.left = `${posPercent}%`;
-                tick.textContent = year;
-
-                tick.addEventListener("click", () => {
-                    rangeMin.value = idx;
-                    rangeMax.value = idx;
-                    applyFilters();
-                });
-
-                yearsList.appendChild(tick);
-            }
-        });
-
-        if (minIdx === maxIdx) {
-            const singleBadge = document.createElement("li");
-            singleBadge.className = "timeline__badge";
-            singleBadge.style.left = `${leftPercent}%`;
-            singleBadge.textContent = startYear;
-            yearsList.appendChild(singleBadge);
-        } else {
-            const leftBadge = document.createElement("li");
-            leftBadge.className = "timeline__badge";
-            leftBadge.style.left = `${leftPercent}%`;
-            leftBadge.textContent = startYear;
-
-            const rightBadge = document.createElement("li");
-            rightBadge.className = "timeline__badge";
-            rightBadge.style.left = `${rightPercent}%`;
-            rightBadge.textContent = endYear;
-
-            yearsList.append(leftBadge, rightBadge);
-        }
-    }
-
-    function applyFilters() {
-        const titleQuery = titleFilter.value.trim().toLowerCase();
-        const selectedAuthor = authorFilter.value;
-        const selectedPublisher = publisherFilter.value;
-
-        // Подсвечиваем селекты, если в них что-то выбрано
-        authorFilter.classList.toggle("has-value", Boolean(selectedAuthor));
-        publisherFilter.classList.toggle("has-value", Boolean(selectedPublisher));
-
-        let filtered = allBooks;
-
-        // 1. Фильтр по таймлайну
-        if (uniqueYears.length > 0) {
-            const maxIndex = uniqueYears.length - 1;
-            let minIdx = parseInt(rangeMin.value, 10);
-            let maxIdx = parseInt(rangeMax.value, 10);
-
-            if (minIdx > maxIdx) {
-                [minIdx, maxIdx] = [maxIdx, minIdx];
-            }
-
-            const startYear = uniqueYears[minIdx];
-            const endYear = uniqueYears[maxIdx];
-
-            const leftPercent = maxIndex === 0 ? 0 : (minIdx / maxIndex) * 100;
-            const rightPercent = maxIndex === 0 ? 0 : 100 - (maxIdx / maxIndex) * 100;
-            progress.style.left = `${leftPercent}%`;
-            progress.style.right = `${rightPercent}%`;
-
-            renderScaleLabels(minIdx, maxIdx, maxIndex);
-
-            const isFullRange = minIdx === 0 && maxIdx === maxIndex;
-
-            filtered = filtered.filter(book => {
-                const bookYears = Array.isArray(book.years) ? book.years : [];
-                if (bookYears.length === 0) return isFullRange;
-                return bookYears.some(y => y >= startYear && y <= endYear);
-            });
-        }
-
-        // 2. Фильтр по автору
-        if (selectedAuthor) {
-            filtered = filtered.filter(book => {
-                if (!book.author) return false;
-                const bookAuthors = book.author.split(",").map(a => a.trim());
-                return bookAuthors.includes(selectedAuthor);
-            });
-        }
-
-        // 3. Фильтр по издательству
-        if (selectedPublisher) {
-            filtered = filtered.filter(book => {
-                return Array.isArray(book.publishers) && book.publishers.includes(selectedPublisher);
-            });
-        }
-
-        // 4. Фильтр по названию книги
-        if (titleQuery) {
-            filtered = filtered.filter(book => {
-                const title = String(book.title ?? "").toLowerCase();
-                return title.includes(titleQuery);
-            });
-        }
-
-        renderBooks(filtered);
-    }
-
-    function renderBooks(bookList) {
-        booksContainer.replaceChildren();
-
-        if (bookList.length === 0) {
-            message.textContent = "Книги по выбранным фильтрам не найдены.";
-            return;
-        }
-
-        message.textContent = `Найдено книг: ${bookList.length}`;
-
-        bookList.forEach(book => {
-            const card = document.createElement("article");
-            card.className = "book-card";
-
-            const top = document.createElement("div");
-
-            const title = document.createElement("h3");
-            title.textContent = book.title ?? "Без названия";
-
-            const author = document.createElement("p");
-            author.textContent = book.author ?? "Автор не указан";
-
-            top.append(title, author);
-
-            // Добавляем строку с переводчиком, если он есть у книги
-            if (book.translator) {
-                const translator = document.createElement("p");
-                translator.className = "book-translator";
-                translator.textContent = `Пер.: ${book.translator}`;
-                top.appendChild(translator);
-            }
-
-            const meta = document.createElement("div");
-            meta.className = "book-meta";
-
-            const pubEl = document.createElement("span");
-            const hasPubs = Array.isArray(book.publishers) && book.publishers.length > 0;
-            pubEl.textContent = hasPubs ? book.publishers.join(", ") : "";
-
-            const yearEl = document.createElement("span");
-            yearEl.className = "book-year";
-            const hasYears = Array.isArray(book.years) && book.years.length > 0;
-            yearEl.textContent = hasYears ? book.years.join(", ") : "";
-
-            meta.append(pubEl, yearEl);
-            card.append(top, meta);
-            booksContainer.appendChild(card);
-        });
-    }
-
-    rangeMin.addEventListener("input", applyFilters);
-    rangeMax.addEventListener("input", applyFilters);
-    authorFilter.addEventListener("change", applyFilters);
-    publisherFilter.addEventListener("change", applyFilters);
-    titleFilter.addEventListener("input", applyFilters);
-
-    resetBtn.addEventListener("click", () => {
-if (uniqueYears.length > 0) {
-rangeMin.value = 0;
-rangeMax.value = uniqueYears.length - 1;
-}
-authorFilter.value = "";
-publisherFilter.value = "";
-titleFilter.value = "";
-applyFilters();
-});
-loadBooks();
-});
