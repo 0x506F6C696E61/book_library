@@ -1,85 +1,16 @@
-def get_book(book_id):
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT
-                b.book_id,
-                b.title,
-                b.liked,
+    <!-- Модальное окно со сведениями о книге -->
+    <div id="book-modal" class="modal">
 
-                -- Авторы
-                (
-                    SELECT string_agg(
-                        DISTINCT CONCAT_WS(' ', a.first_name, a.last_name), ', '
-                    )
-                    FROM book_authors ba
-                    JOIN authors a USING (author_id)
-                    WHERE ba.book_id = b.book_id
-                ) AS authors,
+        <div class="modal-content">
 
-                -- Страны авторов
-                (
-                    SELECT string_agg(
-                        DISTINCT a.author_country, ', '
-                    )
-                    FROM book_authors ba
-                    JOIN authors a USING (author_id)
-                    WHERE ba.book_id = b.book_id
-                      AND a.author_country IS NOT NULL
-                      AND a.author_country <> ''
-                ) AS author_countries,
+            <button id="modal-close" class="modal-close" type="button" aria-label="Закрыть">
+                &times;
+            </button>
 
-                -- Годы издания
-                (
-                    SELECT array_agg(DISTINCT e.publication_year ORDER BY e.publication_year)
-                    FROM editions e
-                    WHERE e.book_id = b.book_id
-                      AND e.publication_year IS NOT NULL
-                ) AS years,
+            <h2>Сведения о книге</h2>
 
-                -- Издательства
-                (
-                    SELECT array_agg(DISTINCT p.name ORDER BY p.name)
-                    FROM editions e
-                    JOIN publishers p USING (publisher_id)
-                    WHERE e.book_id = b.book_id
-                ) AS publishers,
+            <div id="book-details" class="book-details"></div>
 
-                -- Языки издания
-                (
-                    SELECT array_agg(DISTINCT e.language ORDER BY e.language)
-                    FROM editions e
-                    WHERE e.book_id = b.book_id
-                      AND e.language IS NOT NULL
-                ) AS languages,
+        </div>
 
-                -- Переводчики
-                (
-                    SELECT string_agg(
-                        DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', '
-                    )
-                    FROM editions e
-                    JOIN edition_translators et USING (edition_id)
-                    JOIN translators t USING (translator_id)
-                    WHERE e.book_id = b.book_id
-                ) AS translators
-
-            FROM books b
-            WHERE b.book_id = %s
-        """, (book_id,))
-
-        row = cursor.fetchone()
-
-        if row is None:
-            return None
-
-        return {
-            "book_id": row[0],
-            "title": row[1],
-            "liked": row[2],
-            "author": row[3],
-            "author_country": row[4],
-            "years": row[5] or [],
-            "publishers": row[6] or [],
-            "languages": row[7] or [],
-            "translator": row[8]
-        }
+    </div>
