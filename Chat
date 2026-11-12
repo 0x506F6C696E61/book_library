@@ -1,0 +1,22 @@
+<div class="header-filters">
+
+    <input
+        type="text"
+        id="title-filter"
+        class="filter-select"
+        placeholder="Название книги"
+    >
+
+    <select id="author-filter" class="filter-select">
+        <option value="">Автор</option>
+    </select>
+
+    <select id="publisher-filter" class="filter-select">
+        <option value="">Издательство</option>
+    </select>
+
+    <button id="reset-btn" class="reset-btn" type="button">
+        Сбросить
+    </button>
+
+</div>
