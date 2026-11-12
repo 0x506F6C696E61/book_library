@@ -1,37 +1,18 @@
-// Очищаем содержимое предыдущей книги
-bookDetails.replaceChildren();
-
-// Добавляем сведения о книге
-const details = [
-    ["Автор", book.author],
-    ["Страна автора", book.author_country],
-    ["Издательство", book.publishers],
-    ["Язык издания", book.languages],
-    ["Год издания", book.years],
-    ["Переводчик", book.translator],
-    ["Моя оценка", book.liked]
-];
-
-// Создаём отдельный блок для каждого сведения
-details.forEach(([label, value]) => {
-    if (value === null || value === undefined || value === "") {
-        return;
-    }
-
-    const item = document.createElement("div");
-    item.className = "book-detail";
-
-    const title = document.createElement("span");
-    title.className = "book-detail-label";
-    title.textContent = label;
-
-    const content = document.createElement("span");
-    content.className = "book-detail-value";
-    content.textContent = Array.isArray(value) ? value.join(", ") : value;
-
-    item.append(title, content);
-    bookDetails.appendChild(item);
+// Закрываем окно по нажатию на крестик
+modalClose.addEventListener("click", () => {
+    bookModal.classList.remove("active");
 });
 
-// Показываем модальное окно
-bookModal.classList.add("active");
+// Закрываем окно по нажатию на затемнённую область
+bookModal.addEventListener("click", (event) => {
+    if (event.target === bookModal) {
+        bookModal.classList.remove("active");
+    }
+});
+
+// Закрываем окно по нажатию клавиши Escape
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        bookModal.classList.remove("active");
+    }
+});
