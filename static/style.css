@@ -257,6 +257,7 @@ main {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    cursor: pointer;
 }
 
 .book-card h3 {
@@ -311,3 +312,86 @@ main {
     color: #777777 !important;
     margin-top: 6px !important;
 }
+
+
+/* Модальное окно */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Когда окно открыто */
+.modal.active {
+    display: flex;
+}
+
+/* Белая область окна */
+.modal-content {
+    position: relative;
+    background-color: #ffffff;
+    width: 100%;
+    max-width: 550px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 32px;
+    border-radius: 8px;
+}
+
+/* Заголовок окна */
+.modal-content h2 {
+    margin: 0 0 28px;
+    font-size: 22px;
+    font-weight: 500;
+}
+
+/* Кнопка закрытия */
+.modal-close {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #777777;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: #181818;
+}
+
+/* Таблица сведений о книге */
+.book-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.book-detail {
+    display: grid;
+    grid-template-columns: 40% 60%;
+    gap: 20px;
+    padding: 14px 0;
+    border-bottom: 1px solid #eeeeee;
+}
+
+.book-detail:first-child {
+    border-top: 1px solid #eeeeee;
+}
+
+.book-detail-label {
+    font-size: 13px;
+    color: #888888;
+}
+
+.book-detail-value {
+    font-size: 15px;
+    color: #181818;
+    line-height: 1.5;
+}
+

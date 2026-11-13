@@ -70,35 +70,74 @@ def get_books():
 def get_book(book_id):
     with connection.cursor() as cursor:
         cursor.execute("""
-            SELECT 
-                b.book_id, 
-                b.title, 
+            SELECT
+                b.book_id,
+                b.title,
                 b.liked,
-                COALESCE(
-                    string_agg(DISTINCT CONCAT_WS(' ', a.first_name, a.last_name), ', '), 
-                    'Не указан'
+
+                -- Авторы
+                (
+                    SELECT string_agg(
+                        DISTINCT CONCAT_WS(' ', a.first_name, a.last_name), ', '
+                    )
+                    FROM book_authors ba
+                    JOIN authors a USING (author_id)
+                    WHERE ba.book_id = b.book_id
                 ) AS authors,
-                COALESCE(
-                    array_remove(array_agg(DISTINCT e.publication_year ORDER BY e.publication_year), NULL), 
-                    '{}'
+
+                -- Страны авторов
+                (
+                    SELECT string_agg(
+                        DISTINCT a.author_country, ', '
+                    )
+                    FROM book_authors ba
+                    JOIN authors a USING (author_id)
+                    WHERE ba.book_id = b.book_id
+                      AND a.author_country IS NOT NULL
+                      AND a.author_country <> ''
+                ) AS author_countries,
+
+                -- Годы издания
+                (
+                    SELECT array_agg(DISTINCT e.publication_year ORDER BY e.publication_year)
+                    FROM editions e
+                    WHERE e.book_id = b.book_id
+                      AND e.publication_year IS NOT NULL
                 ) AS years,
-                COALESCE(
-                    array_remove(array_agg(DISTINCT p.name ORDER BY p.name), NULL), 
-                    '{}'
+
+                -- Издательства
+                (
+                    SELECT array_agg(DISTINCT p.name ORDER BY p.name)
+                    FROM editions e
+                    JOIN publishers p USING (publisher_id)
+                    WHERE e.book_id = b.book_id
                 ) AS publishers,
-                string_agg(DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', ') AS translators
+
+                -- Языки издания
+                (
+                    SELECT array_agg(DISTINCT e.language ORDER BY e.language)
+                    FROM editions e
+                    WHERE e.book_id = b.book_id
+                      AND e.language IS NOT NULL
+                ) AS languages,
+
+                -- Переводчики
+                (
+                    SELECT string_agg(
+                        DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', '
+                    )
+                    FROM editions e
+                    JOIN edition_translators et USING (edition_id)
+                    JOIN translators t USING (translator_id)
+                    WHERE e.book_id = b.book_id
+                ) AS translators
+
             FROM books b
-            LEFT JOIN book_authors ba USING (book_id)
-            LEFT JOIN authors a USING (author_id)
-            LEFT JOIN editions e USING (book_id)
-            LEFT JOIN publishers p USING (publisher_id)
-            LEFT JOIN edition_translators et USING (edition_id)
-            LEFT JOIN translators t USING (translator_id)
             WHERE b.book_id = %s
-            GROUP BY b.book_id, b.title, b.liked
         """, (book_id,))
 
         row = cursor.fetchone()
+
         if row is None:
             return None
 
@@ -107,9 +146,11 @@ def get_book(book_id):
             "title": row[1],
             "liked": row[2],
             "author": row[3],
-            "years": row[4],
-            "publishers": row[5],
-            "translator": row[6]
+            "author_country": row[4],
+            "years": row[5] or [],
+            "publishers": row[6] or [],
+            "languages": row[7] or [],
+            "translator": row[8]
         }
 
 

@@ -13,10 +13,6 @@
         <div class="header-container">
             <div class="header-top">
                 <h1 class="site-title">Моя библиотека</h1>
-                <div class="search-wrapper">
-                    <input type="text" id="search" class="search-input" placeholder="Поиск по книгам">
-                </div>
-                <button id="reset-btn" class="reset-btn" type="button" title="Сбросить все фильтры">Сбросить</button>
             </div>
 
             <div class="timeline-wrapper">
@@ -36,6 +32,14 @@
 
             <!-- Выпадающие списки под таймлайном -->
             <div class="header-filters">
+
+                <input
+                    type="text"
+                    id="title-filter"
+                    class="filter-select"
+                    placeholder="Название книги"
+                >
+
                 <select id="author-filter" class="filter-select">
                     <option value="">Автор</option>
                 </select>
@@ -43,6 +47,11 @@
                 <select id="publisher-filter" class="filter-select">
                     <option value="">Издательство</option>
                 </select>
+
+                <button id="reset-btn" class="reset-btn" type="button">
+                    Сбросить
+                </button>
+
             </div>
         </div>
     </header>
@@ -52,6 +61,23 @@
         <section id="books" class="books-container"></section> 
     </main>
 
+ <!-- Модальное окно со сведениями о книге -->
+    <div id="book-modal" class="modal">
+
+        <div class="modal-content">
+
+            <button id="modal-close" class="modal-close" type="button" aria-label="Закрыть">
+                &times;
+            </button>
+
+            <h2>Сведения о книге</h2>
+
+            <div id="book-details" class="book-details"></div>
+
+        </div>
+
+    </div>
+    
     <script src="/static/script.js?v=3"></script>
 </body>
 </html>

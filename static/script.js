@@ -1,7 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
     const booksContainer = document.getElementById("books");
     const message = document.getElementById("message");
-    const searchInput = document.getElementById("search");
+    const titleFilter = document.getElementById("title-filter");
+
+    // Элементы модального окна
+    const bookModal = document.getElementById("book-modal");
+    const modalClose = document.getElementById("modal-close");
+    const bookDetails = document.getElementById("book-details");    
 
     const rangeMin = document.getElementById("range-min");
     const rangeMax = document.getElementById("range-max");
@@ -14,6 +19,61 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let allBooks = [];
     let uniqueYears = [];
+
+    // Загружаем подробные сведения о выбранной книге
+async function openBookModal(bookId) {
+    try {
+        const response = await fetch(`/books/${bookId}`);
+
+        if (!response.ok) {
+            throw new Error(`Ошибка сервера: ${response.status}`);
+        }
+
+        const book = await response.json();
+
+        // Очищаем содержимое предыдущей книги
+bookDetails.replaceChildren();
+
+// Добавляем сведения о книге
+const details = [
+    ["Название", book.title],
+    ["Автор", book.author],
+    ["Страна автора", book.author_country],
+    ["Издательство", book.publishers],
+    ["Язык издания", book.languages],
+    ["Год издания", book.years],
+    ["Переводчик", book.translator],
+    ["Моя оценка", book.liked]
+];
+
+// Создаём отдельный блок для каждого сведения
+details.forEach(([label, value]) => {
+    if (value === null || value === undefined || value === "") {
+        return;
+    }
+
+    const item = document.createElement("div");
+    item.className = "book-detail";
+
+    const title = document.createElement("span");
+    title.className = "book-detail-label";
+    title.textContent = label;
+
+    const content = document.createElement("span");
+    content.className = "book-detail-value";
+    content.textContent = Array.isArray(value) ? value.join(", ") : value;
+
+    item.append(title, content);
+    bookDetails.appendChild(item);
+});
+
+// Показываем модальное окно
+bookModal.classList.add("active");
+
+    } catch (error) {
+        console.error("Не удалось загрузить сведения о книге:", error);
+    }
+}
 
     async function loadBooks() {
         message.textContent = "Загружаем книги...";
@@ -159,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function applyFilters() {
-        const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+        const titleQuery = titleFilter.value.trim().toLowerCase();
         const selectedAuthor = authorFilter.value;
         const selectedPublisher = publisherFilter.value;
 
@@ -214,12 +274,11 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        // 4. Фильтр по поисковой строке
-        if (query) {
+        // 4. Фильтр по названию книги
+        if (titleQuery) {
             filtered = filtered.filter(book => {
                 const title = String(book.title ?? "").toLowerCase();
-                const author = String(book.author ?? "").toLowerCase();
-                return title.includes(query) || author.includes(query);
+                return title.includes(titleQuery);
             });
         }
 
@@ -240,6 +299,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const card = document.createElement("article");
             card.className = "book-card";
 
+            //Открываем сведения о книге при нажатии на карточку
+            card.addEventListener("click", () => {
+                openBookModal(book.book_id);
+            });
+
             const top = document.createElement("div");
 
             const title = document.createElement("h3");
@@ -250,28 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             top.append(title, author);
 
-            // Добавляем строку с переводчиком, если он есть у книги
-            if (book.translator) {
-                const translator = document.createElement("p");
-                translator.className = "book-translator";
-                translator.textContent = `Пер.: ${book.translator}`;
-                top.appendChild(translator);
-            }
-
-            const meta = document.createElement("div");
-            meta.className = "book-meta";
-
-            const pubEl = document.createElement("span");
-            const hasPubs = Array.isArray(book.publishers) && book.publishers.length > 0;
-            pubEl.textContent = hasPubs ? book.publishers.join(", ") : "";
-
-            const yearEl = document.createElement("span");
-            yearEl.className = "book-year";
-            const hasYears = Array.isArray(book.years) && book.years.length > 0;
-            yearEl.textContent = hasYears ? book.years.join(", ") : "";
-
-            meta.append(pubEl, yearEl);
-            card.append(top, meta);
+            card.appendChild(top)
             booksContainer.appendChild(card);
         });
     }
@@ -280,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
     rangeMax.addEventListener("input", applyFilters);
     authorFilter.addEventListener("change", applyFilters);
     publisherFilter.addEventListener("change", applyFilters);
-    if (searchInput) searchInput.addEventListener("input", applyFilters);
+    titleFilter.addEventListener("input", applyFilters);
 
     resetBtn.addEventListener("click", () => {
 if (uniqueYears.length > 0) {
@@ -289,8 +332,28 @@ rangeMax.value = uniqueYears.length - 1;
 }
 authorFilter.value = "";
 publisherFilter.value = "";
-if (searchInput) searchInput.value = "";
+titleFilter.value = "";
 applyFilters();
 });
 loadBooks();
+
+// Закрываем окно по нажатию на крестик
+modalClose.addEventListener("click", () => {
+    bookModal.classList.remove("active");
+});
+
+// Закрываем окно по нажатию на затемнённую область
+bookModal.addEventListener("click", (event) => {
+    if (event.target === bookModal) {
+        bookModal.classList.remove("active");
+    }
+});
+
+// Закрываем окно по нажатию клавиши Escape
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        bookModal.classList.remove("active");
+    }
+});
+
 });
