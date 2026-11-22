@@ -11,6 +11,7 @@ load_dotenv()
 
 
 
+
 connection = psycopg.connect(
     host=os.getenv("DB_host"),
     port=os.getenv("DB_port"),
@@ -39,7 +40,16 @@ def get_books():
                     array_remove(array_agg(DISTINCT p.name ORDER BY p.name), NULL), 
                     '{}'
                 ) AS publishers,
-                string_agg(DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', ') AS translators
+                string_agg(DISTINCT CONCAT_WS(' ', t.first_name, t.last_name), ', ') AS translators,
+                COALESCE(
+                    (
+                        SELECT array_agg(DISTINCT g.name ORDER BY g.name)
+                        FROM book_genres bg
+                        JOIN genres g USING (genre_id)
+                        WHERE bg.book_id = b.book_id
+                    ),
+                    '{}'
+                ) AS genres
             FROM books b
             LEFT JOIN book_authors ba USING (book_id)
             LEFT JOIN authors a USING (author_id)
@@ -61,7 +71,8 @@ def get_books():
                 "author": row[3],
                 "years": row[4],
                 "publishers": row[5],
-                "translator": row[6]
+                "translator": row[6],
+                "genres": row[7]
             })
 
         return books

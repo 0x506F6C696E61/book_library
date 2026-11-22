@@ -18,14 +18,39 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const authorFilter = document.getElementById("author-filter");
     const publisherFilter = document.getElementById("publisher-filter");
+    const genreFilter = document.getElementById("genre-filter");
 
     let allBooks = [];
     let uniqueYears = [];
     let currentPage = 1; //при открытии сайта показывается первая страница
     const booksPerPage = 20; //на каждой странцие не более 20 книг (пагинация)
 
+    // Книги, сведения о которых уже открывали.
+    // Сохраняем отметки в браузере, чтобы они не пропадали после обновления страницы.
+    let activeViewedCard = null;
+
+    function markBookAsViewed(card) {
+        if (activeViewedCard) {
+            activeViewedCard.classList.remove("is-viewed");
+        }
+
+        activeViewedCard = card;
+
+        if (activeViewedCard) {
+            activeViewedCard.classList.add("is-viewed");
+        }
+    }
+
+    //возвращаем точку в исходнон состояние
+    function resetViewedCard() {
+        if (activeViewedCard) {
+            activeViewedCard.classList.remove("is-viewed");
+            activeViewedCard = null;
+        }
+    }
+
     // Загружаем подробные сведения о выбранной книге
-async function openBookModal(bookId) {
+async function openBookModal(bookId, card) {
     try {
         const response = await fetch(`/books/${bookId}`);
 
@@ -34,6 +59,10 @@ async function openBookModal(bookId) {
         }
 
         const book = await response.json();
+
+        // Отмечаем книгу как просмотренную после успешной загрузки сведений.
+        markBookAsViewed(card);
+
 
         // Очищаем содержимое предыдущей книги
 bookDetails.replaceChildren();
@@ -104,6 +133,7 @@ document.body.classList.add("panel-open");
     function populateDropdowns() {
         const authorsSet = new Set();
         const publishersSet = new Set();
+        const genresSet = new Set();
 
         allBooks.forEach(book => {
             if (book.author && book.author !== "Не указан") {
@@ -118,10 +148,17 @@ document.body.classList.add("panel-open");
                     if (pub) publishersSet.add(pub.trim());
                 });
             }
+
+            if (Array.isArray(book.genres)) {
+                book.genres.forEach(genre => {
+                    if (genre) genresSet.add(genre.trim());
+                });
+            }
         });
 
         const sortedAuthors = [...authorsSet].sort((a, b) => a.localeCompare(b, "ru"));
         const sortedPublishers = [...publishersSet].sort((a, b) => a.localeCompare(b, "ru"));
+        const sortedGenres = [...genresSet].sort((a, b) => a.localeCompare(b, "ru"));
 
         authorFilter.innerHTML = '<option value="">Автор</option>';
         sortedAuthors.forEach(author => {
@@ -137,6 +174,14 @@ document.body.classList.add("panel-open");
             opt.value = pub;
             opt.textContent = pub;
             publisherFilter.appendChild(opt);
+        });
+
+        genreFilter.innerHTML = '<option value="">Жанр</option>';
+        sortedGenres.forEach(genre => {
+            const opt = document.createElement("option");
+            opt.value = genre;
+            opt.textContent = genre;
+            genreFilter.appendChild(opt);
         });
     }
 
@@ -229,10 +274,12 @@ document.body.classList.add("panel-open");
         const titleQuery = titleFilter.value.trim().toLowerCase();
         const selectedAuthor = authorFilter.value;
         const selectedPublisher = publisherFilter.value;
+        const selectedGenre = genreFilter.value;
 
         // Подсвечиваем селекты, если в них что-то выбрано
         authorFilter.classList.toggle("has-value", Boolean(selectedAuthor));
         publisherFilter.classList.toggle("has-value", Boolean(selectedPublisher));
+        genreFilter.classList.toggle("has-value", Boolean(selectedGenre));
 
         let filtered = allBooks;
 
@@ -281,7 +328,14 @@ document.body.classList.add("panel-open");
             });
         }
 
-        // 4. Фильтр по названию книги
+        // 4. Фильтр по жанру
+        if (selectedGenre) {
+            filtered = filtered.filter(book => {
+                return Array.isArray(book.genres) && book.genres.includes(selectedGenre);
+            });
+        }
+
+        // 5. Фильтр по названию книги
         if (titleQuery) {
             filtered = filtered.filter(book => {
                 const title = String(book.title ?? "").toLowerCase();
@@ -317,9 +371,10 @@ document.body.classList.add("panel-open");
             const card = document.createElement("article");
             card.className = "book-card";
 
+
             //Открываем сведения о книге при нажатии на карточку
             card.addEventListener("click", () => {
-                openBookModal(book.book_id);
+                openBookModal(book.book_id, card);
             });
 
             const top = document.createElement("div");
@@ -408,6 +463,11 @@ currentPage = 1;
 applyFilters();
 });
 
+genreFilter.addEventListener("change", () => {
+currentPage = 1;
+applyFilters();
+});
+
 titleFilter.addEventListener("input", () => {
 currentPage = 1;
 applyFilters();
@@ -422,6 +482,7 @@ rangeMax.value = uniqueYears.length - 1;
 }
 authorFilter.value = "";
 publisherFilter.value = "";
+genreFilter.value = "";
 titleFilter.value = "";
 applyFilters();
 });
@@ -431,6 +492,7 @@ loadBooks();
 modalClose.addEventListener("click", () => {
 bookModal.classList.remove("active");
 document.body.classList.remove("panel-open");
+resetViewedCard();
 });
 
 // Закрываем окно по нажатию на затемнённую область
@@ -438,14 +500,16 @@ bookModal.addEventListener("click", (event) => {
 if (event.target === bookModal) {
 bookModal.classList.remove("active");
 document.body.classList.remove("panel-open");
+resetViewedCard();
 }
 });
 
 // Закрываем окно по нажатию клавиши Escape
 document.addEventListener("keydown", (event) => {
-if (event.key === "Escape") {
+if (event.key === "Escape" && bookModal.classList.contains("active")) {
 bookModal.classList.remove("active");
 document.body.classList.remove("panel-open");
+resetViewedCard();
 }
 });
 
