@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
     const booksContainer = document.getElementById("books");
     const message = document.getElementById("message");
+    const booksCount = document.getElementById("books-count");
+    const pagination = document.getElementById("pagination");
     const titleFilter = document.getElementById("title-filter");
 
     // Элементы модального окна
@@ -19,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let allBooks = [];
     let uniqueYears = [];
+    let currentPage = 1; //при открытии сайта показывается первая страница
+    const booksPerPage = 20; //на каждой странцие не более 20 книг (пагинация)
 
     // Загружаем подробные сведения о выбранной книге
 async function openBookModal(bookId) {
@@ -67,8 +71,9 @@ details.forEach(([label, value]) => {
     bookDetails.appendChild(item);
 });
 
-// Показываем модальное окно
+// Показываем боковую панель
 bookModal.classList.add("active");
+document.body.classList.add("panel-open");
 
     } catch (error) {
         console.error("Не удалось загрузить сведения о книге:", error);
@@ -85,6 +90,8 @@ bookModal.classList.add("active");
             }
 
             allBooks = await response.json();
+            message.textContent = "";
+
             populateDropdowns();
             initTimeline();
         } catch (error) {
@@ -287,15 +294,26 @@ bookModal.classList.add("active");
 
     function renderBooks(bookList) {
         booksContainer.replaceChildren();
+        
+        pagination.innerHTML = "";
+
+        const totalPages = Math.ceil(bookList.length / booksPerPage);
+
+        const startIndex = (currentPage - 1) *booksPerPage;
+        const endIndex = startIndex + booksPerPage;
+        const booksToShow = bookList.slice(startIndex, endIndex);
+
 
         if (bookList.length === 0) {
             message.textContent = "Книги по выбранным фильтрам не найдены.";
+            booksCount.textContent = "Найдено книг: 0"
             return;
         }
 
-        message.textContent = `Найдено книг: ${bookList.length}`;
+       
+        booksCount.textContent = `Найдено книг: ${bookList.length}`;
 
-        bookList.forEach(book => {
+        booksToShow.forEach(book => {
             const card = document.createElement("article");
             card.className = "book-card";
 
@@ -317,15 +335,87 @@ bookModal.classList.add("active");
             card.appendChild(top)
             booksContainer.appendChild(card);
         });
+        renderPagination(totalPages);
+    }
+    
+    function renderPagination(totalPages) {
+pagination.replaceChildren();
+
+const prevButton = document.createElement("button");
+prevButton.textContent = "←";
+prevButton.className = "page-btn";
+prevButton.disabled = currentPage === 1;
+
+prevButton.addEventListener("click", () => {
+if (currentPage > 1) {
+currentPage--;
+applyFilters();
+}
+});
+
+pagination.appendChild(prevButton);
+
+for (let page = 1; page <= totalPages; page++) {
+    const button = document.createElement("button");
+    button.textContent = page;
+    button.className = "page-btn";
+
+    if (page === currentPage) {
+        button.classList.add("active");
     }
 
-    rangeMin.addEventListener("input", applyFilters);
-    rangeMax.addEventListener("input", applyFilters);
-    authorFilter.addEventListener("change", applyFilters);
-    publisherFilter.addEventListener("change", applyFilters);
-    titleFilter.addEventListener("input", applyFilters);
+    button.addEventListener("click", () => {
+        currentPage = page;
+        applyFilters();
+    });
+
+    pagination.appendChild(button);
+}
+
+const nextButton = document.createElement("button");
+nextButton.textContent = "→";
+nextButton.className = "page-btn";
+nextButton.disabled = currentPage === totalPages;
+
+nextButton.addEventListener("click", () => {
+if (currentPage < totalPages) {
+currentPage++;
+applyFilters();
+}
+});
+
+pagination.appendChild(nextButton);
+
+}
+
+    rangeMin.addEventListener("input", () => {
+currentPage = 1;
+applyFilters();
+});
+
+rangeMax.addEventListener("input", () => {
+currentPage = 1;
+applyFilters();
+});
+
+authorFilter.addEventListener("change", () => {
+currentPage = 1;
+applyFilters();
+});
+
+publisherFilter.addEventListener("change", () => {
+currentPage = 1;
+applyFilters();
+});
+
+titleFilter.addEventListener("input", () => {
+currentPage = 1;
+applyFilters();
+});
 
     resetBtn.addEventListener("click", () => {
+        currentPage = 1;
+
 if (uniqueYears.length > 0) {
 rangeMin.value = 0;
 rangeMax.value = uniqueYears.length - 1;
@@ -339,21 +429,24 @@ loadBooks();
 
 // Закрываем окно по нажатию на крестик
 modalClose.addEventListener("click", () => {
-    bookModal.classList.remove("active");
+bookModal.classList.remove("active");
+document.body.classList.remove("panel-open");
 });
 
 // Закрываем окно по нажатию на затемнённую область
 bookModal.addEventListener("click", (event) => {
-    if (event.target === bookModal) {
-        bookModal.classList.remove("active");
-    }
+if (event.target === bookModal) {
+bookModal.classList.remove("active");
+document.body.classList.remove("panel-open");
+}
 });
 
 // Закрываем окно по нажатию клавиши Escape
 document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-        bookModal.classList.remove("active");
-    }
+if (event.key === "Escape") {
+bookModal.classList.remove("active");
+document.body.classList.remove("panel-open");
+}
 });
 
 });

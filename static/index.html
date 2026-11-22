@@ -36,8 +36,9 @@
                 <input
                     type="text"
                     id="title-filter"
-                    class="filter-select"
-                    placeholder="Название книги"
+                    class="filter-select search-field"
+                    placeholder="Книга"
+                    autocomplete="off"
                 >
 
                 <select id="author-filter" class="filter-select">
@@ -46,6 +47,10 @@
 
                 <select id="publisher-filter" class="filter-select">
                     <option value="">Издательство</option>
+                </select>
+
+                <select id="genre-filter" class="filter-select">
+                    <option value="">Жанр</option>
                 </select>
 
                 <button id="reset-btn" class="reset-btn" type="button">
@@ -58,21 +63,25 @@
 
     <main>
         <p id="message">Загружаем книги...</p>
+        <p id="books-count" class="books-count"></p> <!-- создаем место для Найдено книг: N-->
         <section id="books" class="books-container"></section> 
+        <nav id="pagination" class="pagination"></nav>
     </main>
 
  <!-- Модальное окно со сведениями о книге -->
-    <div id="book-modal" class="modal">
+        <div id="book-modal" class="modal">
 
-        <div class="modal-content">
+            <aside class="book-panel">
 
-            <button id="modal-close" class="modal-close" type="button" aria-label="Закрыть">
+                <button id="modal-close" class="modal-close" type="button" aria-label="Закрыть">
                 &times;
-            </button>
+                </button>
 
-            <h2>Сведения о книге</h2>
+                <h2>Сведения о книге</h2>
 
-            <div id="book-details" class="book-details"></div>
+                <div id="book-details" class="book-details"></div>
+
+            </aside>
 
         </div>
 
